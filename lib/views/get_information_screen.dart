@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:quizer_student/constants.dart';
+import 'package:quizer_student/components/custom_app_bar.dart';
 import 'package:quizer_student/helper/utility.dart';
+import 'package:quizer_student/views/waiting_room_screen.dart';
 
 class GetInformationScreen extends StatefulWidget {
   const GetInformationScreen({Key? key}) : super(key: key);
@@ -39,7 +40,7 @@ class _GetInformationScreenState extends State<GetInformationScreen> {
     return SafeArea(
       child: Scaffold(
         key: _scaffoldKey,
-        appBar: buildAppBar(),
+        appBar: CustomAppBar(),
         body: buildSingleChildScrollView(),
       ),
     );
@@ -63,18 +64,6 @@ class _GetInformationScreenState extends State<GetInformationScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  AppBar buildAppBar() {
-    return AppBar(
-      elevation: 5,
-      shadowColor: primaryColor,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(30))),
-      automaticallyImplyLeading: false,
-      centerTitle: true,
-      title: Text(appName, style: TextStyle(color: primaryColor)),
     );
   }
 
@@ -137,13 +126,33 @@ class _GetInformationScreenState extends State<GetInformationScreen> {
         .where('examLoginCode', isEqualTo: _loginCodeController.text)
         .get()
         .then((QuerySnapshot querySnapshot) {
-      querySnapshot.docs.forEach((docs) {
-        if (docs['examLoginCode'] == _loginCodeController.text) {
+      querySnapshot.docs.forEach((document) {
+        if (document['examLoginCode'] == _loginCodeController.text) {
           Utiliy.customSnackBar(_scaffoldKey, 'Sınavda başarılar... :)');
-          // go to exam screen
+          DocumentReference student =
+              FirebaseFirestore.instance.collection('students').doc();
+          student.set({
+            'studentName': _nameController.text,
+            'studentSurName': _surNameController.text,
+            'studentNumber': _numberController.text,
+            'examLoginCode': _loginCodeController.text,
+          });
+
+          Future.delayed(const Duration(seconds: 2), () {
+            setState(() {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => WaitingRoomScreen(
+                          querySnapshot: querySnapshot,
+                          docId: document.id,
+                          student: student)));
+            });
+          });
         }
       });
     });
+    //TODO hata var düzeltimesi gerek
     Utiliy.customSnackBar(_scaffoldKey, 'Sınav giriş kodunuz yanlış!');
   }
 }

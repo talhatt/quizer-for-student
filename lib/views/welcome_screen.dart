@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:quizer_student/get_information_screen.dart';
+import 'package:quizer_student/views/get_information_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   WelcomeScreen({Key? key}) : super(key: key);
