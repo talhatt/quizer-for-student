@@ -24,6 +24,11 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
   String userSurname = "";
   String userSchool = "";
   bool isExamStarted = false;
+  late bool switchBetweenQuestions;
+  late bool threeWrongsOneTrue;
+  late String questionName;
+  late String roomName;
+  late int totalTime;
   @override
   //void initState() {
   //checkExam();
@@ -87,10 +92,23 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
         .then((DocumentSnapshot documentSnapshot) {
       setState(() {
         isExamStarted = documentSnapshot['examIsStarted'];
+        switchBetweenQuestions = documentSnapshot['switchBetweenQuestions'];
+        threeWrongsOneTrue = documentSnapshot['threeWrongsOneTrue'];
+        questionName = documentSnapshot['questionName'];
+        roomName = documentSnapshot['roomName'];
+        totalTime = documentSnapshot['totalTime'];
       });
     });
     if (isExamStarted) {
-      return ExamScreen(student: widget.student);
+      return ExamScreen(
+        student: widget.student,
+        docId: widget.docId,
+        switchBetweenQuestions: switchBetweenQuestions,
+        threeWrongsOneTrue: threeWrongsOneTrue,
+        totalTime: totalTime,
+        roomName: roomName,
+        questionName: questionName,
+      );
     } else {
       return SafeArea(
         child: Scaffold(
