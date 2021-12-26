@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:quizer_student/components/custom_app_bar.dart';
 import 'package:quizer_student/constants.dart';
+import 'package:quizer_student/models/question/question.dart';
 import 'package:quizer_student/views/exam_screen.dart';
 
 class WaitingRoomScreen extends StatefulWidget {
@@ -23,57 +24,85 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
   String userName = "";
   String userSurname = "";
   String userSchool = "";
+  String userId = "";
+  List<Question> questions = <Question>[];
   bool isExamStarted = false;
   late bool switchBetweenQuestions;
   late bool threeWrongsOneTrue;
   late String questionName;
   late String roomName;
   late int totalTime;
-  @override
-  //void initState() {
-  //checkExam();
-  //super.initState();
-  //}
-
-  //checkExam() {
-  //setState(() {
-  //isExamStarted = widget.querySnapshot.docs[0]['examIsStarted'];
-  //});
-  //}
 
   @override
-  Widget build(BuildContext context) {
-    //StreamSubscription exam = FirebaseFirestore.instance
-    //.collection('examManagement')
-    //.doc(widget.docId)
-    //.snapshots()
-    //.listen((snapshot) {
-    //Map<String, dynamic>? examManagement = snapshot.data();
-    //print(examManagement!['examIsStarted']);
-    //if (examManagement['examIsStarted']) {
-    //setState(() {
-    //examIsStarted = true;
-    //});
-    //print("exam: $examIsStarted");
-    //} else {
-    //setState(() {
-    //examIsStarted = false;
-    //});
-    //}
-    //});
+  void initState() {
+    getExamInfo();
+    findQuestions();
+    getUserInfo();
+    super.initState();
+  }
 
-    // check it exam is started?
-    //WidgetsBinding.instance!.addPostFrameCallback((_) {
-    //if (widget.querySnapshot.docs[0]['examIsStarted']) {
-    ////exam.cancel();
-    //Navigator.push(
-    //context,
-    //MaterialPageRoute(
-    //builder: (context) => ExamScreen(student: widget.student)));
-    //}
-    //});
+  getExamInfo() {
+    FirebaseFirestore.instance
+        .collection('examManagement')
+        .doc(widget.docId)
+        .get()
+        .then((document) {
+      questionName = document['questionName'];
+      totalTime = document['totalTime'];
+      isExamStarted = document['examIsStarted'];
+      switchBetweenQuestions = document['switchBetweenQuestions'];
+      threeWrongsOneTrue = document['threeWrongsOneTrue'];
+      roomName = document['roomName'];
+    });
+  }
 
-    // get teacher information
+  findQuestions() {
+    var question = FirebaseFirestore.instance
+        .collection('questions')
+        .get()
+        .then((snapshot) {
+      snapshot.docs.forEach((document) {
+        if (document.id == questionName) {
+          getQuestions(document.id.toString());
+          return;
+        }
+      });
+    });
+  }
+
+  getQuestions(String documentId) {
+    FirebaseFirestore.instance
+        .collection('questions')
+        .doc(documentId)
+        .collection('question')
+        .get()
+        .then((docs) {
+      for (var i = 0; i < docs.docs.length; i++) {
+        if (docs.docs[i]['questionType'] == "multipleChoice") {
+          questions.add(Question.multiple(
+            question: docs.docs[i]['question'],
+            correctAnswer: docs.docs[i]['correctAnswer'],
+            option1: docs.docs[i]['option1'],
+            option2: docs.docs[i]['option2'],
+            option3: docs.docs[i]['option3'],
+            option4: docs.docs[i]['option4'],
+          ));
+        } else if (docs.docs[i]['questionType'] == "gapFilling") {
+          questions.add(Question.gapFilling(
+            question: docs.docs[i]['question'],
+            correctAnswer: docs.docs[i]['correctAnswer'],
+          ));
+        } else if (docs.docs[i]['questionType'] == "trueFalse") {
+          questions.add(Question.trueFalse(
+            question: docs.docs[i]['question'],
+            correctAnswer: docs.docs[i]['correctAnswer'],
+          ));
+        }
+      }
+    });
+  }
+
+  getUserInfo() {
     FirebaseFirestore.instance
         .collection('users')
         .where('userId', isEqualTo: widget.querySnapshot.docs[0]['userId'])
@@ -83,8 +112,14 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
         userName = querySnapshot.docs[0]['userName'];
         userSurname = querySnapshot.docs[0]['userSurname'];
         userSchool = querySnapshot.docs[0]['userSchool'];
+        userId = querySnapshot.docs[0]['userId'];
       });
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Is exam started ? Check it
     FirebaseFirestore.instance
         .collection('examManagement')
         .doc(widget.docId)
@@ -92,13 +127,9 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
         .then((DocumentSnapshot documentSnapshot) {
       setState(() {
         isExamStarted = documentSnapshot['examIsStarted'];
-        switchBetweenQuestions = documentSnapshot['switchBetweenQuestions'];
-        threeWrongsOneTrue = documentSnapshot['threeWrongsOneTrue'];
-        questionName = documentSnapshot['questionName'];
-        roomName = documentSnapshot['roomName'];
-        totalTime = documentSnapshot['totalTime'];
       });
     });
+
     if (isExamStarted) {
       return ExamScreen(
         student: widget.student,
@@ -108,6 +139,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
         totalTime: totalTime,
         roomName: roomName,
         questionName: questionName,
+        questions: questions,
       );
     } else {
       return SafeArea(

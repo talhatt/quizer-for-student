@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Question {
   late String question;
   late String questionType;
@@ -16,13 +18,26 @@ class Question {
     this.option4,
   });
 
-  Question.multiple() {
+  Question.multiple({
+    required this.question,
+    required this.correctAnswer,
+    required this.option1,
+    required this.option2,
+    required this.option3,
+    required this.option4,
+  }) {
     questionType = "multipleChoice";
   }
-  Question.gapFilling() {
+  Question.gapFilling({
+    required this.question,
+    required this.correctAnswer,
+  }) {
     questionType = "gapFilling";
   }
-  Question.trueFalse() {
+  Question.trueFalse({
+    required this.question,
+    required this.correctAnswer,
+  }) {
     questionType = "trueFalse";
   }
 }

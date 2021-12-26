@@ -18,7 +18,8 @@ class ExamScreen extends StatefulWidget {
       required this.threeWrongsOneTrue,
       required this.questionName,
       required this.roomName,
-      required this.totalTime})
+      required this.totalTime,
+      required this.questions})
       : super(key: key);
   final DocumentReference student;
   final String docId;
@@ -27,6 +28,7 @@ class ExamScreen extends StatefulWidget {
   final String questionName;
   final String roomName;
   final int totalTime;
+  final List<Question> questions;
 
   @override
   _ExamScreenState createState() => _ExamScreenState();
@@ -36,51 +38,7 @@ class _ExamScreenState extends State<ExamScreen> {
   late int _leftTime;
   late Timer _timer;
   PageController _pageViewController = PageController(initialPage: 0);
-
-  List<Question> questions = [
-    Question(
-        question: "Aşağıdakilerden hangisi bir prgramlama dili degildir?",
-        questionType: "multiple",
-        correctAnswer: "option3",
-        option1: "Dart",
-        option2: "C",
-        option3: "Html",
-        option4: "Java"),
-    Question(
-        question: "Aşağıdakilerden hangisi bir prgramlama dilidir?",
-        questionType: "multiple",
-        correctAnswer: "option4",
-        option1: "Html",
-        option2: "Css",
-        option3: "Xml",
-        option4: "C"),
-    Question(
-      question: "Türkiyenin başkenti _____'dır",
-      questionType: "gap_filling",
-      correctAnswer: "ankara",
-    ),
-    Question(
-      question: "Aşagıdakilerden hangisi dogrudur?",
-      questionType: "true/false",
-      correctAnswer: "true",
-    ),
-  ];
-  //Future<void> setExamSettings() async {
-  //await FirebaseFirestore.instance
-  //.collection('examManagement')
-  //.doc(widget.docId)
-  //.get()
-  //.then((DocumentSnapshot snapshot) {
-  //Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
-  //setState(() {
-  //switchBetweenQuestions = data['switchBetweenQuestions'];
-  //threeWrongsOneTrue = data['threeWrongsOneTrue'];
-  //_totalTime = data['totalTime'];
-  //roomName = data['roomName'];
-  //questionName = data['questionName'];
-  //});
-  //});
-  //}
+  int currentQuestionNumber = 0;
 
   void startTimer() {
     _leftTime = widget.totalTime;
@@ -104,12 +62,6 @@ class _ExamScreenState extends State<ExamScreen> {
 
   @override
   void initState() {
-    print(widget.docId);
-    print(widget.totalTime.toString());
-    print(widget.switchBetweenQuestions.toString());
-    print(widget.threeWrongsOneTrue.toString());
-    print(widget.questionName);
-    print(widget.roomName);
     startTimer();
     super.initState();
   }
@@ -170,16 +122,46 @@ class _ExamScreenState extends State<ExamScreen> {
                 displayText: 'dk kaldı.',
               ),
             ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Soru ",
+                  style: TextStyle(fontSize: 30),
+                ),
+                Text(
+                  currentQuestionNumber.toString() +
+                      "/" +
+                      widget.questions.length.toString(),
+                  style: TextStyle(fontSize: 30),
+                ),
+              ],
+            ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: PageView.builder(
                     controller: _pageViewController,
                     physics: NeverScrollableScrollPhysics(),
-                    itemCount: questions.length,
+                    itemCount: widget.questions.length,
                     itemBuilder: (context, index) {
+                      currentQuestionNumber = index + 1;
                       // questionType a göre ekran döndüreceğiz
-                      return GapFillingScreen(question: questions[index]);
+                      if (widget.questions[index].questionType ==
+                          "multipleChoice") {
+                        return MultipleChoiceScreen(
+                            question: widget.questions[index]);
+                      } else if (widget.questions[index].questionType ==
+                          "trueFalse") {
+                        return TrueFalseScreen(
+                            question: widget.questions[index]);
+                      } else if (widget.questions[index].questionType ==
+                          "gapFilling") {
+                        return GapFillingScreen(
+                            question: widget.questions[index]);
+                      } else {
+                        return Text("Hata!");
+                      }
                     }),
               ),
             ),
