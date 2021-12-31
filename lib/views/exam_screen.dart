@@ -7,6 +7,7 @@ import 'package:quizer_student/components/multiple_choice_screen.dart';
 import 'package:quizer_student/components/progress_bar.dart';
 import 'package:quizer_student/components/true_false_screen.dart';
 import 'package:quizer_student/constants.dart';
+import 'package:quizer_student/helper/utility.dart';
 import 'package:quizer_student/models/question/question.dart';
 
 class ExamScreen extends StatefulWidget {
@@ -36,46 +37,42 @@ class ExamScreen extends StatefulWidget {
 
 class _ExamScreenState extends State<ExamScreen> {
   late int _leftTime;
-  late Timer _timer;
   PageController _pageViewController = PageController(initialPage: 0);
   int currentQuestionNumber = 0;
-
-  void startTimer() {
-    _leftTime = widget.totalTime;
-    const oneSec = const Duration(seconds: 1);
-    _timer = new Timer.periodic(
-      oneSec,
-      (Timer timer) {
-        if (_leftTime == 0) {
-          setState(() {
-            timer.cancel();
-          });
-        } else {
-          setState(() {
-            _leftTime--;
-            print("Süre: " + _leftTime.toString());
-          });
-        }
-      },
-    );
-  }
-
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   @override
   void initState() {
-    startTimer();
     super.initState();
+    _leftTime = widget.totalTime;
   }
 
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
+  Future<void> saveAndQuit() async {
+    List<String> answers = <String>[];
+    for (var question in widget.questions) {
+      answers.add(question.answer);
+    }
+    FirebaseFirestore.instance
+        .collection('students')
+        .doc(widget.student.id)
+        .update({
+      'studentAnswers': answers,
+    }).then((_) {
+      Utiliy.customSnackBar(_scaffoldKey, "Sonuçlar kaydedildi.");
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    FirebaseFirestore.instance
+        .collection('examManagement')
+        .doc(widget.docId)
+        .get()
+        .then((document) {
+      _leftTime = document['leftTime'];
+    });
     return SafeArea(
       child: Scaffold(
+        key: _scaffoldKey,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           automaticallyImplyLeading: false,
@@ -126,13 +123,12 @@ class _ExamScreenState extends State<ExamScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  "Soru ",
-                  style: TextStyle(fontSize: 30),
-                ),
-                Text(
-                  currentQuestionNumber.toString() +
-                      "/" +
-                      widget.questions.length.toString(),
+                  currentQuestionNumber != widget.questions.length
+                      ? "Soru " +
+                          (currentQuestionNumber + 1).toString() +
+                          " / " +
+                          widget.questions.length.toString()
+                      : "Sınav bitti!",
                   style: TextStyle(fontSize: 30),
                 ),
               ],
@@ -142,23 +138,89 @@ class _ExamScreenState extends State<ExamScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: PageView.builder(
                     controller: _pageViewController,
-                    physics: NeverScrollableScrollPhysics(),
-                    itemCount: widget.questions.length,
+                    physics: widget.switchBetweenQuestions
+                        ? AlwaysScrollableScrollPhysics()
+                        : NeverScrollableScrollPhysics(),
+                    itemCount: widget.questions.length + 1,
                     itemBuilder: (context, index) {
-                      currentQuestionNumber = index + 1;
-                      // questionType a göre ekran döndüreceğiz
-                      if (widget.questions[index].questionType ==
+                      currentQuestionNumber = index;
+                      if (index == widget.questions.length) {
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: GridView.builder(
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 4,
+                                ),
+                                itemCount: widget.questions.length,
+                                itemBuilder: (BuildContext context, int value) {
+                                  return Padding(
+                                    padding: const EdgeInsets.all(4.0),
+                                    child: SizedBox(
+                                      width: MediaQuery.of(context).size.width *
+                                          2.5,
+                                      height:
+                                          MediaQuery.of(context).size.height *
+                                              2.5,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          widget.switchBetweenQuestions
+                                              ? _pageViewController
+                                                  .jumpToPage(value)
+                                              : null;
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 8.0),
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                (value + 1).toString(),
+                                              ),
+                                              Icon(widget.questions[value]
+                                                          .answer ==
+                                                      ""
+                                                  ? Icons.close
+                                                  : Icons.check),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                saveAndQuit();
+                              },
+                              child: Text("Kaydet ve çık"),
+                            ),
+                          ],
+                        );
+                      } else if (widget.questions[index].questionType ==
                           "multipleChoice") {
                         return MultipleChoiceScreen(
-                            question: widget.questions[index]);
+                          question: widget.questions[index],
+                          student: widget.student,
+                        );
                       } else if (widget.questions[index].questionType ==
                           "trueFalse") {
                         return TrueFalseScreen(
-                            question: widget.questions[index]);
+                          question: widget.questions[index],
+                          student: widget.student,
+                        );
                       } else if (widget.questions[index].questionType ==
                           "gapFilling") {
                         return GapFillingScreen(
-                            question: widget.questions[index]);
+                          question: widget.questions[index],
+                          student: widget.student,
+                        );
                       } else {
                         return Text("Hata!");
                       }

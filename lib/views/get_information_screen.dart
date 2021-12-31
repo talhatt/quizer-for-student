@@ -136,6 +136,7 @@ class _GetInformationScreenState extends State<GetInformationScreen> {
             'studentSurName': _surNameController.text,
             'studentNumber': _numberController.text,
             'examLoginCode': _loginCodeController.text,
+            'correctAnswerCounter': 0,
           });
 
           Future.delayed(const Duration(seconds: 2), () {

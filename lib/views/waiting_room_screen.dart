@@ -36,8 +36,8 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
   @override
   void initState() {
     getExamInfo();
-    findQuestions();
     getUserInfo();
+    findQuestions();
     super.initState();
   }
 
@@ -57,12 +57,10 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
   }
 
   findQuestions() {
-    var question = FirebaseFirestore.instance
-        .collection('questions')
-        .get()
-        .then((snapshot) {
+    FirebaseFirestore.instance.collection('questions').get().then((snapshot) {
       snapshot.docs.forEach((document) {
-        if (document.id == questionName) {
+        if (document.data()['name'] == questionName &&
+            document.data()['userId'] == userId) {
           getQuestions(document.id.toString());
           return;
         }

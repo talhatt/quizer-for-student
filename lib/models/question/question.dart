@@ -8,6 +8,7 @@ class Question {
   String? option2;
   String? option3;
   String? option4;
+  String answer = "";
   Question({
     required this.question,
     required this.questionType,
